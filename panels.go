@@ -37,3 +37,9 @@ func preparePacketDump() *tview.TextView {
 	text.SetBorder(true).SetTitle("Dump").SetBackgroundColor(tcell.ColorDefault)
 	return text
 }
+
+func prepareFrame(primitive tview.Primitive) *tview.Frame {
+	frame := tview.NewFrame(primitive).SetBorders(0, 0, 0, 0, 0, 0)
+	frame.SetBackgroundColor(tcell.ColorDefault)
+	return frame
+}

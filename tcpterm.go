@@ -10,6 +10,11 @@ import (
 	"github.com/sachaos/tview"
 )
 
+const (
+	TailMode = iota
+	SelectMode
+)
+
 type Tcpterm struct {
 	src        *gopacket.PacketSource
 	view       *tview.Application
@@ -17,7 +22,9 @@ type Tcpterm struct {
 	table      *tview.Table
 	detail     *tview.TextView
 	dump       *tview.TextView
+	frame      *tview.Frame
 	packets    []gopacket.Packet
+	mode       int
 }
 
 const (
@@ -36,8 +43,9 @@ func NewTcpterm(src *gopacket.PacketSource) *Tcpterm {
 		AddItem(packetList, 0, 1, true).
 		AddItem(packetDetail, 0, 1, false).
 		AddItem(packetDump, 0, 1, false)
+	frame := prepareFrame(layout)
 
-	view.SetRoot(layout, true).SetFocus(packetList)
+	view.SetRoot(frame, true).SetFocus(packetList)
 
 	app := &Tcpterm{
 		src:        src,
@@ -46,7 +54,9 @@ func NewTcpterm(src *gopacket.PacketSource) *Tcpterm {
 		table:      packetList,
 		detail:     packetDetail,
 		dump:       packetDump,
+		frame:      frame,
 	}
+	app.SwitchToTailMode()
 
 	view.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyCtrlC {
@@ -60,15 +70,12 @@ func NewTcpterm(src *gopacket.PacketSource) *Tcpterm {
 	})
 
 	packetList.SetDoneFunc(func(key tcell.Key) {
-		if key == tcell.KeyEnter {
-			packetList.SetSelectable(true, false)
-			row, column := packetList.GetOffset()
-			packetList.Select(row+1, column)
-			app.displayDetailOf(row + 1)
+		if key == tcell.KeyEsc {
+			app.SwitchToTailMode()
 		}
 
-		if key == tcell.KeyEsc {
-			packetList.SetSelectable(false, false)
+		if key == tcell.KeyEnter {
+			app.SwitchToSelectMode()
 		}
 	})
 
@@ -107,6 +114,28 @@ func (app *Tcpterm) Run() {
 
 func (app *Tcpterm) Stop() {
 	app.view.Stop()
+}
+
+func (app *Tcpterm) SwitchToTailMode() {
+	app.mode = TailMode
+
+	app.table.SetSelectable(false, false)
+	app.table.ScrollToEnd()
+
+	app.frame.Clear().AddText("**Tail**", true, tview.AlignLeft, tcell.ColorGreen)
+	app.frame.AddText("g: page top, G: page end, TAB: rotate panel, Enter: Detail mode", true, tview.AlignRight, tcell.ColorDefault)
+}
+
+func (app *Tcpterm) SwitchToSelectMode() {
+	app.mode = SelectMode
+
+	app.table.SetSelectable(true, false)
+	row, _ := app.table.GetOffset()
+	app.table.Select(row+1, 0)
+	app.displayDetailOf(row + 1)
+
+	app.frame.Clear().AddText("*Detail*", true, tview.AlignLeft, tcell.ColorBlue)
+	app.frame.AddText("g: page top, G: page end, TAB: rotate panel, ECS: Tail mode", true, tview.AlignRight, tcell.ColorDefault)
 }
 
 func (app *Tcpterm) displayDetailOf(row int) {
