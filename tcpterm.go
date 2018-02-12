@@ -3,7 +3,9 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io"
 	"strconv"
+	"time"
 
 	"github.com/gdamore/tcell"
 	"github.com/google/gopacket"
@@ -87,23 +89,48 @@ func NewTcpterm(src *gopacket.PacketSource) *Tcpterm {
 }
 
 func (app *Tcpterm) Run() {
+	refreshTrigger := make(chan bool)
+
 	go func() {
 		cnt := 0
-		for packet := range app.src.Packets() {
-			cnt++
-			rowCount := app.table.GetRowCount()
+		for {
+			packet, err := app.src.NextPacket()
+			if err == io.EOF {
+				return
+			} else if err == nil {
+				cnt++
+				rowCount := app.table.GetRowCount()
 
-			flow := packet.NetworkLayer().NetworkFlow()
-			app.table.SetCell(rowCount, 0, tview.NewTableCell(strconv.Itoa(cnt)))
-			app.table.SetCell(rowCount, 1, tview.NewTableCell(packet.Metadata().Timestamp.Format(timestampFormt)))
-			app.table.SetCell(rowCount, 2, tview.NewTableCell(flow.String()))
-			app.table.SetCell(rowCount, 3, tview.NewTableCell(strconv.Itoa(packet.Metadata().Length)))
-			app.table.SetCell(rowCount, 4, tview.NewTableCell(packet.LinkLayer().LayerType().String()))
-			app.table.SetCell(rowCount, 5, tview.NewTableCell(packet.NetworkLayer().LayerType().String()))
-			app.table.SetCell(rowCount, 6, tview.NewTableCell(packet.TransportLayer().LayerType().String()))
+				flow := packet.NetworkLayer().NetworkFlow()
+				app.table.SetCell(rowCount, 0, tview.NewTableCell(strconv.Itoa(cnt)))
+				app.table.SetCell(rowCount, 1, tview.NewTableCell(packet.Metadata().Timestamp.Format(timestampFormt)))
+				app.table.SetCell(rowCount, 2, tview.NewTableCell(flow.String()))
+				app.table.SetCell(rowCount, 3, tview.NewTableCell(strconv.Itoa(packet.Metadata().Length)))
+				app.table.SetCell(rowCount, 4, tview.NewTableCell(packet.NetworkLayer().LayerType().String()))
+				app.table.SetCell(rowCount, 5, tview.NewTableCell(packet.TransportLayer().LayerType().String()))
 
-			app.packets = append(app.packets, packet)
-			app.view.Draw()
+				app.packets = append(app.packets, packet)
+
+				if cnt%1000 == 0 {
+					refreshTrigger <- true
+				}
+			}
+		}
+	}()
+
+	go func() {
+		for {
+			time.Sleep(1000 * time.Millisecond)
+			refreshTrigger <- true
+		}
+	}()
+
+	go func() {
+		for {
+			_, ok := <-refreshTrigger
+			if ok {
+				app.view.Draw()
+			}
 		}
 	}()
 
