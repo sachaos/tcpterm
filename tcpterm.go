@@ -28,7 +28,7 @@ type Tcpterm struct {
 }
 
 const (
-	timestampFormt = "2006-01-02 15:04:03.000000"
+	timestampFormt = "2006-01-02 15:04:05.000000"
 )
 
 func NewTcpterm(src *gopacket.PacketSource) *Tcpterm {
