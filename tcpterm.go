@@ -88,51 +88,55 @@ func NewTcpterm(src *gopacket.PacketSource) *Tcpterm {
 	return app
 }
 
+func (app *Tcpterm) PacketListGenerator(refreshTrigger chan bool) {
+	cnt := 0
+	for {
+		packet, err := app.src.NextPacket()
+		if err == io.EOF {
+			return
+		} else if err == nil {
+			cnt++
+			rowCount := app.table.GetRowCount()
+
+			flow := packet.NetworkLayer().NetworkFlow()
+			app.table.SetCell(rowCount, 0, tview.NewTableCell(strconv.Itoa(cnt)))
+			app.table.SetCell(rowCount, 1, tview.NewTableCell(packet.Metadata().Timestamp.Format(timestampFormt)))
+			app.table.SetCell(rowCount, 2, tview.NewTableCell(flow.String()))
+			app.table.SetCell(rowCount, 3, tview.NewTableCell(strconv.Itoa(packet.Metadata().Length)))
+			app.table.SetCell(rowCount, 4, tview.NewTableCell(packet.NetworkLayer().LayerType().String()))
+			app.table.SetCell(rowCount, 5, tview.NewTableCell(packet.TransportLayer().LayerType().String()))
+
+			app.packets = append(app.packets, packet)
+
+			if cnt%1000 == 0 {
+				refreshTrigger <- true
+			}
+		}
+	}
+}
+
+func (app *Tcpterm) Ticker(refreshTrigger chan bool) {
+	for {
+		time.Sleep(1000 * time.Millisecond)
+		refreshTrigger <- true
+	}
+}
+
+func (app *Tcpterm) Refresh(refreshTrigger chan bool) {
+	for {
+		_, ok := <-refreshTrigger
+		if ok {
+			app.view.Draw()
+		}
+	}
+}
+
 func (app *Tcpterm) Run() {
 	refreshTrigger := make(chan bool)
 
-	go func() {
-		cnt := 0
-		for {
-			packet, err := app.src.NextPacket()
-			if err == io.EOF {
-				return
-			} else if err == nil {
-				cnt++
-				rowCount := app.table.GetRowCount()
-
-				flow := packet.NetworkLayer().NetworkFlow()
-				app.table.SetCell(rowCount, 0, tview.NewTableCell(strconv.Itoa(cnt)))
-				app.table.SetCell(rowCount, 1, tview.NewTableCell(packet.Metadata().Timestamp.Format(timestampFormt)))
-				app.table.SetCell(rowCount, 2, tview.NewTableCell(flow.String()))
-				app.table.SetCell(rowCount, 3, tview.NewTableCell(strconv.Itoa(packet.Metadata().Length)))
-				app.table.SetCell(rowCount, 4, tview.NewTableCell(packet.NetworkLayer().LayerType().String()))
-				app.table.SetCell(rowCount, 5, tview.NewTableCell(packet.TransportLayer().LayerType().String()))
-
-				app.packets = append(app.packets, packet)
-
-				if cnt%1000 == 0 {
-					refreshTrigger <- true
-				}
-			}
-		}
-	}()
-
-	go func() {
-		for {
-			time.Sleep(1000 * time.Millisecond)
-			refreshTrigger <- true
-		}
-	}()
-
-	go func() {
-		for {
-			_, ok := <-refreshTrigger
-			if ok {
-				app.view.Draw()
-			}
-		}
-	}()
+	go app.PacketListGenerator(refreshTrigger)
+	go app.Ticker(refreshTrigger)
+	go app.Refresh(refreshTrigger)
 
 	if app.view.Run(); err != nil {
 		panic(err)
