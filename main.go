@@ -66,13 +66,17 @@ func main() {
 			Name:  "read, r",
 			Usage: "Read packets from pcap file.",
 		},
+		cli.BoolFlag{
+			Name:  "debug",
+			Usage: "debug mode.",
+		},
 	}
 
 	app.Action = func(c *cli.Context) error {
 		packetSource, close := findSource(c)
 		defer close()
 
-		tcpterm := NewTcpterm(packetSource)
+		tcpterm := NewTcpterm(packetSource, c.Bool("debug"))
 		tcpterm.Run()
 		return nil
 	}

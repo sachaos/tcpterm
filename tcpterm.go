@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
+	"os"
 	"strconv"
 	"time"
 
@@ -27,13 +29,15 @@ type Tcpterm struct {
 	frame      *tview.Frame
 	packets    []gopacket.Packet
 	mode       int
+
+	logger *log.Logger
 }
 
 const (
 	timestampFormt = "2006-01-02 15:04:05.000000"
 )
 
-func NewTcpterm(src *gopacket.PacketSource) *Tcpterm {
+func NewTcpterm(src *gopacket.PacketSource, debug bool) *Tcpterm {
 	view := tview.NewApplication()
 
 	packetList := preparePacketList()
@@ -49,6 +53,13 @@ func NewTcpterm(src *gopacket.PacketSource) *Tcpterm {
 
 	view.SetRoot(frame, true).SetFocus(packetList)
 
+	var w io.Writer
+	if debug {
+		w = os.Stderr
+	} else {
+		w = NewNopWriter()
+	}
+
 	app := &Tcpterm{
 		src:        src,
 		view:       view,
@@ -57,6 +68,7 @@ func NewTcpterm(src *gopacket.PacketSource) *Tcpterm {
 		detail:     packetDetail,
 		dump:       packetDump,
 		frame:      frame,
+		logger:     log.New(w, "[tcpterm]", log.Ldate|log.Ltime|log.Lmicroseconds|log.Lshortfile),
 	}
 	app.SwitchToTailMode()
 
@@ -99,6 +111,7 @@ func (app *Tcpterm) PacketListGenerator(refreshTrigger chan bool) {
 			rowCount := app.table.GetRowCount()
 
 			flow := packet.NetworkLayer().NetworkFlow()
+			app.logger.Printf("count: %v\n", cnt)
 			app.table.SetCell(rowCount, 0, tview.NewTableCell(strconv.Itoa(cnt)))
 			app.table.SetCell(rowCount, 1, tview.NewTableCell(packet.Metadata().Timestamp.Format(timestampFormt)))
 			app.table.SetCell(rowCount, 2, tview.NewTableCell(flow.String()))
