@@ -31,6 +31,26 @@ func findDevice(c *cli.Context) string {
 	return devices[0].Name
 }
 
+func createHandle(c *cli.Context) (*pcap.Handle, error) {
+	fileName := c.String("read")
+	if fileName != "" {
+		return pcap.OpenOffline(fileName)
+	} else {
+		device := findDevice(c)
+		return pcap.OpenLive(device, snapshot_len, promiscuous, timeout)
+
+	}
+}
+
+func findSource(c *cli.Context) (*gopacket.PacketSource, func()) {
+	handle, err := createHandle(c)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return gopacket.NewPacketSource(handle, handle.LinkType()), handle.Close
+}
+
 func main() {
 	app := cli.NewApp()
 	app.Name = "tcpterm"
@@ -42,17 +62,15 @@ func main() {
 			Name:  "interface, i",
 			Usage: "If unspecified, use lowest numbered interface.",
 		},
+		cli.StringFlag{
+			Name:  "read, r",
+			Usage: "Read packets from pcap file.",
+		},
 	}
 
 	app.Action = func(c *cli.Context) error {
-		device := findDevice(c)
-		handle, err = pcap.OpenLive(device, snapshot_len, promiscuous, timeout)
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer handle.Close()
-
-		packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
+		packetSource, close := findSource(c)
+		defer close()
 
 		tcpterm := NewTcpterm(packetSource)
 		tcpterm.Run()
