@@ -110,16 +110,20 @@ func (app *Tcpterm) PacketListGenerator(refreshTrigger chan bool) {
 			cnt++
 			rowCount := app.table.GetRowCount()
 
-			flow := packet.NetworkLayer().NetworkFlow()
-			app.logger.Printf("count: %v\n", cnt)
+			app.logger.Printf("count: %v start\n", cnt)
+
 			app.table.SetCell(rowCount, 0, tview.NewTableCell(strconv.Itoa(cnt)))
 			app.table.SetCell(rowCount, 1, tview.NewTableCell(packet.Metadata().Timestamp.Format(timestampFormt)))
-			app.table.SetCell(rowCount, 2, tview.NewTableCell(flow.String()))
+			app.table.SetCell(rowCount, 2, tview.NewTableCell(flowOf(packet)))
 			app.table.SetCell(rowCount, 3, tview.NewTableCell(strconv.Itoa(packet.Metadata().Length)))
-			app.table.SetCell(rowCount, 4, tview.NewTableCell(packet.NetworkLayer().LayerType().String()))
-			app.table.SetCell(rowCount, 5, tview.NewTableCell(packet.TransportLayer().LayerType().String()))
+			app.table.SetCell(rowCount, 4, tview.NewTableCell(packet.Layers()[1].LayerType().String()))
+			if len(packet.Layers()) > 2 {
+				app.table.SetCell(rowCount, 5, tview.NewTableCell(packet.Layers()[2].LayerType().String()))
+			}
 
 			app.packets = append(app.packets, packet)
+
+			app.logger.Printf("count: %v end\n", cnt)
 
 			if cnt%1000 == 0 {
 				refreshTrigger <- true
@@ -167,6 +171,7 @@ func (app *Tcpterm) SwitchToTailMode() {
 	app.table.ScrollToEnd()
 
 	app.frame.Clear().AddText("**Tail**", true, tview.AlignLeft, tcell.ColorGreen)
+
 	app.frame.AddText("g: page top, G: page end, TAB: rotate panel, Enter: Detail mode", true, tview.AlignRight, tcell.ColorDefault)
 }
 
@@ -216,4 +221,12 @@ func (app *Tcpterm) findPrimitiveIdx(p tview.Primitive) (int, error) {
 		}
 	}
 	return 0, errors.New("Primitive not found")
+}
+
+func flowOf(packet gopacket.Packet) string {
+	if packet.NetworkLayer() == nil {
+		return "-"
+	} else {
+		return packet.NetworkLayer().NetworkFlow().String()
+	}
 }

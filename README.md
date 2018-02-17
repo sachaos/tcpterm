@@ -42,5 +42,4 @@ TODO
 ---
 
 * Optimize packets list view.
-* Fix SIGSEGV bug.
 * Improve detail view, and dump view.

@@ -13,7 +13,7 @@ func preparePacketList() *tview.Table {
 		SetBackgroundColor(tcell.ColorDefault).
 		SetBorder(true)
 
-	columns := []string{"No.", "Time", "Flow", "Length", "Network Type", "Transport Type"}
+	columns := []string{"No.", "Time", "Flow", "Length", "Network", "Transport"}
 	for i, column := range columns {
 		table.SetCell(0, i,
 			tview.NewTableCell(column).
