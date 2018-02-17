@@ -124,17 +124,13 @@ func (app *Tcpterm) PacketListGenerator(refreshTrigger chan bool) {
 			app.packets = append(app.packets, packet)
 
 			app.logger.Printf("count: %v end\n", cnt)
-
-			if cnt%1000 == 0 {
-				refreshTrigger <- true
-			}
 		}
 	}
 }
 
 func (app *Tcpterm) Ticker(refreshTrigger chan bool) {
 	for {
-		time.Sleep(1000 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 		refreshTrigger <- true
 	}
 }
