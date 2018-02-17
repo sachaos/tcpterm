@@ -3,8 +3,6 @@ tcpterm
 
 tcpterm visualize packets in TUI.
 
-This project aims tcpdump for human.
-
 Demo
 ---
 
