@@ -182,7 +182,7 @@ func (app *Tcpterm) SwitchToSelectMode() {
 	app.displayDetailOf(row + 1)
 
 	app.frame.Clear().AddText("*Detail*", true, tview.AlignLeft, tcell.ColorBlue)
-	app.frame.AddText("g: page top, G: page end, TAB: rotate panel, ECS: Tail mode", true, tview.AlignRight, tcell.ColorDefault)
+	app.frame.AddText("g: page top, G: page end, TAB: rotate panel, ESC: Tail mode", true, tview.AlignRight, tcell.ColorDefault)
 }
 
 func (app *Tcpterm) displayDetailOf(row int) {
