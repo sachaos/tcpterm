@@ -38,6 +38,9 @@ COMMANDS:
 
 GLOBAL OPTIONS:
    --interface value, -i value  If unspecified, use lowest numbered interface.
+   --read value, -r value       Read packets from pcap file.
+   --filter value, -f value     BPF Filter
+   --debug                      debug mode.
    --help, -h                   show help
    --version, -v                print the version
 ```

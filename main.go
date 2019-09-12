@@ -48,6 +48,13 @@ func findSource(c *cli.Context) (*gopacket.PacketSource, func()) {
 		log.Fatal(err)
 	}
 
+	if c.String("filter") != "" {
+		err := handle.SetBPFFilter(c.String("filter"))
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
 	return gopacket.NewPacketSource(handle, handle.LinkType()), handle.Close
 }
 
@@ -65,6 +72,10 @@ func main() {
 		cli.StringFlag{
 			Name:  "read, r",
 			Usage: "Read packets from pcap file.",
+		},
+		cli.StringFlag{
+			Name:  "filter, f",
+			Usage: "BPF Filter",
 		},
 		cli.BoolFlag{
 			Name:  "debug",
