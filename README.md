@@ -11,6 +11,10 @@ Demo
 Install
 ---
 
+*Requires libpacp header files for compilation*
+
+For Debian based distriubutions install package _libpcap-dev_
+
 ```
 $ go get github.com/sachaos/tcpterm
 ```
