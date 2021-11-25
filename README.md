@@ -16,7 +16,7 @@ Install
 For Debian based distriubutions install package _libpcap-dev_
 
 ```
-$ go get github.com/sachaos/tcpterm
+$ go install github.com/sachaos/tcpterm
 ```
 
 Usage
